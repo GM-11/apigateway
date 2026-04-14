@@ -26,19 +26,27 @@ func Middleware(next http.Handler) http.Handler {
 
 		prefix := "Bearer "
 		if !strings.HasPrefix(authHeader, prefix) {
-			http.Error(w, "Malformed authorization header: not a bearer token", http.StatusUnauthorized)
+			log.Printf("Malformed authorization header: Invalid Authorization code")
+			http.Error(w, "Malformed authorization header", http.StatusUnauthorized)
 			return
 		}
 
 		reqToken := strings.TrimPrefix(authHeader, prefix)
 		tokenParts := strings.Split(reqToken, ".")
 		if len(tokenParts) != 3 {
-			http.Error(w, "Malformed token: expected 3 parts", http.StatusUnauthorized)
+			log.Printf("Invalid Token")
+			http.Error(w, "Malformed token", http.StatusUnauthorized)
 			return
 		}
 		var header struct {
 			Kid string `json:"kid"`
 			Alg string `json:"alg"`
+		}
+
+		if header.Alg != "RS256" {
+			log.Printf("Unsupported algorithm: %s", header.Alg)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
 		}
 
 		headerBytes, err := base64.RawURLEncoding.DecodeString(tokenParts[0])
@@ -49,7 +57,6 @@ func Middleware(next http.Handler) http.Handler {
 		}
 		if err = json.Unmarshal(headerBytes, &header); err != nil {
 			log.Printf("Failed to parse token header: %v", err)
-
 			http.Error(w, "invalid token", http.StatusUnauthorized)
 			return
 		}
