@@ -4,28 +4,28 @@ import "sync"
 
 type Counter struct {
 	index int
-	mu    sync.RWMutex
+	mu    sync.Mutex
 }
 
 type RoundRobin struct {
-	counters map[*Route]*Counter
+	counters map[string]*Counter
 }
 
 func (rr *RoundRobin) InitRR(routes []Route) {
-	counters := make(map[*Route]*Counter)
-	for i := range routes {
+	counters := make(map[string]*Counter)
+	for _, route := range routes {
 		c := Counter{
 			index: 0,
-			mu:    sync.RWMutex{},
+			mu:    sync.Mutex{},
 		}
 
-		counters[&routes[i]] = &c
+		counters[route.Prefix] = &c
 	}
 	rr.counters = counters
 }
 
 func (rr *RoundRobin) GetServerIndex(route Route) int {
-	r := rr.counters[&route]
+	r := rr.counters[route.Prefix]
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
