@@ -57,7 +57,7 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		middlwares = append(middlwares, router.rateLimiter.Middleware)
 	}
 
-	finalHandler := router.serve(route, path)
+	finalHandler := router.serve(route)
 	chain(finalHandler, middlwares...).ServeHTTP(w, r.WithContext(ctx))
 
 }
