@@ -32,8 +32,11 @@ func main() {
 	}()
 
 	<-quit
+	log.Println("shutdown signal received")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	server.Shutdown(ctx)
-
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("shutdown error: %v", err)
+	}
 }
