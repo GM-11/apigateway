@@ -82,11 +82,6 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 			userId = host
 		}
 
-		if !ok {
-			http.Error(w, "Route prefix does not exist", http.StatusNotFound)
-			return
-		}
-
 		if _, exists := rl.configs[utils.GetRoutePrefixKey()]; !exists {
 			next.ServeHTTP(w, r)
 			return
