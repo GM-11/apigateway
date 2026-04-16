@@ -21,7 +21,6 @@ type Router struct {
 }
 
 func NewRouter(routes []utils.Route) *Router {
-	// routing.BuildTrie()
 	return &Router{
 		trie:        routing.NewTrie(routes),
 		roundRobin:  routing.NewRoundRobin(routes),
