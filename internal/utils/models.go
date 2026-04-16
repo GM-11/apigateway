@@ -2,13 +2,27 @@ package utils
 
 import (
 	"time"
+
+	"example.com/m/v2/internal/circuitbreaker"
 )
 
 type Route struct {
-	Prefix       string     `yaml:"prefix"`
-	AuthRequired bool       `yaml:"auth_required"`
-	Upstreams    []string   `yaml:"upstreams"`
-	RateLimit    *RateLimit `yaml:"rate_limit"`
+	Prefix       string      `yaml:"prefix"`
+	AuthRequired bool        `yaml:"auth_required"`
+	Upstreams    []*Upstream `yaml:"upstreams"`
+	RateLimit    *RateLimit  `yaml:"rate_limit"`
+}
+
+type Upstream struct {
+	Config         UpstreamConfig
+	CircuitBreaker *circuitbreaker.CircuitBreaker
+}
+
+type UpstreamConfig struct {
+	URL              string        `yaml:"url"`
+	FailureThreshold int           `yaml:"failure_threshold"`
+	RecoveryWindow   time.Duration `yaml:"recovery_window"`
+	FailureWindow    time.Duration `yaml:"failure_window"`
 }
 
 type RateLimit struct {
