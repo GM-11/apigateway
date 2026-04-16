@@ -27,7 +27,6 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		router.serve(route, path).ServeHTTP(w, r)
 	}
-
 }
 
 func (router *Router) serve(route *Route, path string) http.Handler {

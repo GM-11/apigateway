@@ -20,13 +20,13 @@ type AuthConfig struct {
 }
 
 type Route struct {
-	Prefix       string    `yaml:"prefix"`
-	AuthRequired bool      `yaml:"auth_required"`
-	Upstreams    []string  `yaml:"upstreams"`
-	RateLimit    RateLimit `yaml:"rate_limit"`
+	Prefix       string     `yaml:"prefix"`
+	AuthRequired bool       `yaml:"auth_required"`
+	Upstreams    []string   `yaml:"upstreams"`
+	RateLimit    *RateLimit `yaml:"rate_limit"`
 }
 
 type RateLimit struct {
-	Rate  int `yaml:"rate"`
-	Burst int `yaml:"burst"`
+	Rate  float64 `yaml:"rate"`
+	Burst int     `yaml:"burst"`
 }
