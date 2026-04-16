@@ -10,7 +10,10 @@ import (
 	"time"
 
 	"example.com/m/v2/internal"
+	"example.com/m/v2/internal/metrics"
 	"example.com/m/v2/internal/routing"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -22,7 +25,10 @@ func main() {
 	router := internal.NewRouter(config.Routes)
 
 	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
 	mux.Handle("/", router)
+
+	metrics.Init()
 
 	server := http.Server{
 		Addr:         ":8080",
