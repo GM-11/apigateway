@@ -19,6 +19,18 @@ const claimsKey contextKey = "claims"
 
 var Cache *KeyCache = NewKeyCache(time.Hour * 24 * 2)
 
+func GetUserID(r *http.Request) (string, bool) {
+	claims, ok := r.Context().Value(claimsKey).(struct {
+		Sub string `json:"sub"`
+		Exp int64  `json:"exp"`
+		Iat int64  `json:"iat"`
+	})
+	if !ok {
+		return "", false
+	}
+	return claims.Sub, true
+}
+
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
