@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"example.com/m/v2/internal/auth"
 	"example.com/m/v2/internal/utils"
 )
 
@@ -58,10 +57,22 @@ func (rl *RateLimiter) getBucket(key, prefix string) *TokenBucket {
 	return nb
 }
 
+func getUserId(r *http.Request) (string, bool) {
+	claims, ok := r.Context().Value(utils.GetClaimsKey()).(struct {
+		Sub string `json:"sub"`
+		Exp int64  `json:"exp"`
+		Iat int64  `json:"iat"`
+	})
+	if !ok {
+		return "", false
+	}
+	return claims.Sub, true
+}
+
 func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		userId, ok := auth.GetUserID(r)
+		userId, ok := getUserId(r)
 		if !ok {
 			host, _, err := net.SplitHostPort(r.RemoteAddr)
 			if err != nil {
