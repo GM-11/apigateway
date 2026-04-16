@@ -1,6 +1,10 @@
 package routing
 
-import "strings"
+import (
+	"strings"
+
+	"example.com/m/v2/internal/utils"
+)
 
 type Trie struct {
 	root *TrieNode
@@ -8,28 +12,24 @@ type Trie struct {
 
 type TrieNode struct {
 	children map[string]*TrieNode
-	Route    *Route
+	Route    *utils.Route
 }
 
-func NewTrie() *Trie {
-	return &Trie{
+func NewTrie(routes []utils.Route) *Trie {
+	newTrie := &Trie{
 		root: &TrieNode{
 			children: make(map[string]*TrieNode),
 		},
 	}
-}
 
-func BuildTrie(config *Config) *Trie {
-	newTrie := NewTrie()
-
-	for _, route := range config.Routes {
+	for _, route := range routes {
 		newTrie.Insert(route)
 	}
 
 	return newTrie
 }
 
-func (trie *Trie) Insert(route Route) {
+func (trie *Trie) Insert(route utils.Route) {
 	prefixes := strings.Split(route.Prefix, "/")
 	curr := trie.root
 	for _, prefix := range prefixes {
@@ -50,7 +50,7 @@ func (trie *Trie) Insert(route Route) {
 	curr.Route = &route
 }
 
-func (trie *Trie) Match(path string) *Route {
+func (trie *Trie) Match(path string) *utils.Route {
 	prefixes := strings.Split(path, "/")
 	curr := trie.root
 	for _, prefix := range prefixes {
