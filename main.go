@@ -8,11 +8,21 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"example.com/m/v2/internal"
+	"example.com/m/v2/internal/routing"
 )
 
 func main() {
 
+	config, err := routing.LoadConfig(os.Getenv("CONFIG_PATH"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	router := internal.NewRouter(config.Routes)
+
 	mux := http.NewServeMux()
+	mux.Handle("/", router)
 
 	server := http.Server{
 		Addr:         ":8080",
