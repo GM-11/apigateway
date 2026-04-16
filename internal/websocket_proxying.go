@@ -8,7 +8,9 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"time"
 
+	"example.com/m/v2/internal/metrics"
 	"example.com/m/v2/internal/utils"
 )
 
@@ -19,6 +21,7 @@ func (router *Router) callWs(w http.ResponseWriter, r *http.Request, upstreamURL
 		http.Error(w, "Failed to parse upstream URL", http.StatusInternalServerError)
 		return err
 	}
+
 	conn, err := net.Dial("tcp", parsed.Host)
 	if err != nil {
 		log.Println(err.Error())
@@ -42,8 +45,8 @@ func (router *Router) callWs(w http.ResponseWriter, r *http.Request, upstreamURL
 		return err
 	}
 
-	if resp.StatusCode != 101 {
-		log.Println(resp.StatusCode)
+	if resp.StatusCode != http.StatusSwitchingProtocols {
+		log.Printf("WebSocket upgrade failed with status: %d", resp.StatusCode)
 		http.Error(w, "Upstream rejected the request", http.StatusBadRequest)
 		return fmt.Errorf("upstream rejected websocket upgrade: %d", resp.StatusCode)
 	}
@@ -52,7 +55,7 @@ func (router *Router) callWs(w http.ResponseWriter, r *http.Request, upstreamURL
 
 	if !ok {
 		http.Error(w, "websocket not supported", http.StatusInternalServerError)
-		return err
+		return fmt.Errorf("hijacking not supported")
 	}
 
 	clientConn, _, err := hijacker.Hijack()
@@ -92,6 +95,10 @@ func (router *Router) callWs(w http.ResponseWriter, r *http.Request, upstreamURL
 
 func (router *Router) serveWebSocket(route *utils.Route) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		start := time.Now()
+		prefix := r.Context().Value(utils.GetRoutePrefixKey()).(string)
+
 		success := false
 
 		for i := 0; i < len(route.Upstreams); i++ {
@@ -101,7 +108,10 @@ func (router *Router) serveWebSocket(route *utils.Route) http.Handler {
 			if selectedStream.CircuitBreaker.Allow(selectedStream.Config.RecoveryWindow) {
 				err := router.callWs(w, r, selectedStream.Config.URL)
 				if err != nil {
-					selectedStream.CircuitBreaker.RecordFailure(selectedStream.Config.FailureThreshold, selectedStream.Config.FailureWindow)
+					selectedStream.CircuitBreaker.RecordFailure(
+						selectedStream.Config.FailureThreshold,
+						selectedStream.Config.FailureWindow,
+					)
 					continue
 				}
 
@@ -112,9 +122,16 @@ func (router *Router) serveWebSocket(route *utils.Route) http.Handler {
 
 		}
 
-		if !success {
-			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		duration := time.Since(start).Seconds()
+
+		if success {
+			metrics.HttpRequestsTotal.WithLabelValues("WS", prefix, "101").Inc()
+			metrics.HttpRequestDuration.WithLabelValues("WS", prefix).Observe(duration)
 			return
 		}
+
+		metrics.HttpRequestsTotal.WithLabelValues("WS", prefix, "ERROR").Inc()
+		metrics.HttpRequestDuration.WithLabelValues("WS", prefix).Observe(duration)
+		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 	})
 }

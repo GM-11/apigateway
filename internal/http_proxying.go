@@ -5,14 +5,25 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
+	"example.com/m/v2/internal/metrics"
 	"example.com/m/v2/internal/utils"
 )
 
 func (router *Router) call(upstreamUrl string, r *http.Request) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(r.Context(), r.Method, fmt.Sprintf("%s%s", upstreamUrl, r.URL.RequestURI()), r.Body)
+	url := fmt.Sprintf("%s%s", upstreamUrl, r.URL.RequestURI())
+	routePrefix := r.Context().Value(utils.GetRoutePrefixKey()).(string)
+
+	log.Printf("Forwarding request to %s", url)
+	req, err := http.NewRequestWithContext(r.Context(), r.Method, url, r.Body)
 	if err != nil {
 		log.Println(err.Error())
+		metrics.HttpRequestsTotal.WithLabelValues(
+			"UPSTREAM",
+			routePrefix,
+			"ERROR",
+		).Inc()
 		return nil, err
 	}
 
@@ -22,12 +33,32 @@ func (router *Router) call(upstreamUrl string, r *http.Request) (*http.Response,
 		}
 	}
 
+	start := time.Now()
+
 	resp, err := router.client.Do(req)
+
+	duration := time.Since(start).Seconds()
+
+	metrics.HttpRequestDuration.WithLabelValues(
+		"UPSTREAM",
+		routePrefix,
+	).Observe(duration)
 
 	if err != nil {
 		log.Println(err.Error())
+		metrics.HttpRequestsTotal.WithLabelValues(
+			"UPSTREAM",
+			routePrefix,
+			"ERROR",
+		).Inc()
 		return nil, err
 	}
+
+	metrics.HttpRequestsTotal.WithLabelValues(
+		"UPSTREAM",
+		routePrefix,
+		http.StatusText(resp.StatusCode),
+	).Inc()
 
 	return resp, nil
 }

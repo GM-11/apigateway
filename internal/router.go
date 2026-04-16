@@ -6,10 +6,21 @@ import (
 	"strings"
 
 	"example.com/m/v2/internal/auth"
+	"example.com/m/v2/internal/metrics"
 	"example.com/m/v2/internal/ratelimit"
 	"example.com/m/v2/internal/routing"
 	"example.com/m/v2/internal/utils"
 )
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(status int) {
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
+}
 
 type Router struct {
 	trie        *routing.Trie
@@ -45,7 +56,9 @@ func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.WithValue(r.Context(), utils.GetRoutePrefixKey(), route.Prefix)
 
-	middlwares := make([]func(http.Handler) http.Handler, 0)
+	middlwares := []func(http.Handler) http.Handler{
+		metrics.Middleware,
+	}
 
 	if route.AuthRequired {
 		middlwares = append(middlwares, auth.Middleware)

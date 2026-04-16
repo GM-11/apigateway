@@ -3,6 +3,8 @@ package circuitbreaker
 import (
 	"sync"
 	"time"
+
+	"example.com/m/v2/internal/metrics"
 )
 
 const (
@@ -59,6 +61,7 @@ func (cb *CircuitBreaker) RecordFailure(failureThreshold int, failureWindow time
 		if cb.failureCount > failureThreshold {
 			cb.currentState = StateOpen
 			cb.circuitOpenedTimestamp = time.Now()
+			metrics.CircuitBreakerTrips.Inc()
 		}
 	case StateHalfOpen:
 		cb.currentState = StateOpen

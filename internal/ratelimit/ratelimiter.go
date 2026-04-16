@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"example.com/m/v2/internal/metrics"
 	"example.com/m/v2/internal/utils"
 )
 
@@ -82,13 +83,15 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 			userId = host
 		}
 
-		if _, exists := rl.configs[utils.GetRoutePrefixKey()]; !exists {
+		prefix := r.Context().Value(utils.GetRoutePrefixKey()).(string)
+		if _, exists := rl.configs[prefix]; !exists {
 			next.ServeHTTP(w, r)
 			return
 		}
 
 		tb := rl.getBucket(userId, utils.GetRoutePrefixKey())
 		if !tb.Allow() {
+			metrics.RateLimitHits.WithLabelValues(prefix).Inc()
 			http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
 			return
 		}

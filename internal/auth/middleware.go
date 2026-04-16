@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"example.com/m/v2/internal/metrics"
 	"example.com/m/v2/internal/utils"
 )
 
@@ -24,18 +25,20 @@ func Middleware(next http.Handler) http.Handler {
 
 		prefix := "Bearer "
 		if !strings.HasPrefix(authHeader, prefix) {
-			log.Printf("Malformed authorization header: Invalid Authorization code")
+			metrics.AuthFailures.Inc()
 			http.Error(w, "Malformed authorization header", http.StatusUnauthorized)
 			return
 		}
 
 		reqToken := strings.TrimPrefix(authHeader, prefix)
 		tokenParts := strings.Split(reqToken, ".")
+
 		if len(tokenParts) != 3 {
-			log.Printf("Invalid Token")
+			metrics.AuthFailures.Inc()
 			http.Error(w, "Malformed token", http.StatusUnauthorized)
 			return
 		}
+
 		var header struct {
 			Kid string `json:"kid"`
 			Alg string `json:"alg"`
@@ -54,6 +57,8 @@ func Middleware(next http.Handler) http.Handler {
 			return
 		}
 		if err = json.Unmarshal(headerBytes, &header); err != nil {
+			metrics.AuthFailures.Inc()
+
 			log.Printf("Failed to parse token header: %v", err)
 			http.Error(w, "invalid token", http.StatusUnauthorized)
 			return
@@ -61,6 +66,7 @@ func Middleware(next http.Handler) http.Handler {
 
 		pubkey, err := Cache.GetKey(header.Kid)
 		if err != nil {
+			metrics.AuthFailures.Inc()
 			log.Printf("Failed to get public key for kid %s: %v", header.Kid, err.Error())
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
@@ -72,6 +78,7 @@ func Middleware(next http.Handler) http.Handler {
 
 		signinBytes, err := base64.RawURLEncoding.DecodeString(tokenParts[2])
 		if err != nil {
+			metrics.AuthFailures.Inc()
 			log.Printf("Malformed token: invalid base64 in signature")
 			http.Error(w, "Malformed token", http.StatusUnauthorized)
 			return
@@ -80,7 +87,7 @@ func Middleware(next http.Handler) http.Handler {
 		err = rsa.VerifyPKCS1v15(pubkey, crypto.SHA256, signingHash[:], signinBytes)
 
 		if err != nil {
-
+			metrics.AuthFailures.Inc()
 			log.Printf("Token signature verification failed: %v", err)
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
@@ -94,16 +101,19 @@ func Middleware(next http.Handler) http.Handler {
 
 		payloadBytes, err := base64.RawURLEncoding.DecodeString(tokenParts[1])
 		if err != nil {
+			metrics.AuthFailures.Inc()
 			http.Error(w, "Invalid Token", http.StatusUnauthorized)
 			return
 		}
 
 		if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+			metrics.AuthFailures.Inc()
 			http.Error(w, "Invalid Token", http.StatusUnauthorized)
 			return
 		}
 
 		if time.Now().Unix() > claims.Exp {
+			metrics.AuthFailures.Inc()
 			http.Error(w, "Token Expired", http.StatusUnauthorized)
 			return
 		}
