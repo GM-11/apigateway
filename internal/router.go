@@ -6,7 +6,7 @@ import (
 	"net/http/httputil"
 
 	"example.com/m/v2/internal/auth"
-	"example.com/m/v2/internal/ratelimitting"
+	"example.com/m/v2/internal/ratelimit"
 	"example.com/m/v2/internal/routing"
 	"example.com/m/v2/internal/utils"
 
@@ -17,7 +17,7 @@ type Router struct {
 	trie        *routing.Trie
 	roundRobin  *routing.RoundRobin
 	client      *http.Client
-	rateLimiter *ratelimitting.RateLimiter
+	rateLimiter *ratelimit.RateLimiter
 }
 
 func NewRouter(routes []utils.Route) *Router {
@@ -25,7 +25,7 @@ func NewRouter(routes []utils.Route) *Router {
 		trie:        routing.NewTrie(routes),
 		roundRobin:  routing.NewRoundRobin(routes),
 		client:      &http.Client{},
-		rateLimiter: ratelimitting.NewRateLimiter(routes),
+		rateLimiter: ratelimit.NewRateLimiter(routes),
 	}
 }
 
