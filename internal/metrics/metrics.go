@@ -48,5 +48,7 @@ func Init() {
 		HttpRequestsTotal,
 		HttpRequestDuration,
 		AuthFailures,
+		CircuitBreakerTrips,
+		RateLimitHits,
 	)
 }
