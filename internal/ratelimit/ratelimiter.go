@@ -89,7 +89,7 @@ func (rl *RateLimiter) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		tb := rl.getBucket(userId, utils.GetRoutePrefixKey())
+		tb := rl.getBucket(userId, prefix)
 		if !tb.Allow() {
 			metrics.RateLimitHits.WithLabelValues(prefix).Inc()
 			http.Error(w, "Rate limit exceeded", http.StatusTooManyRequests)
