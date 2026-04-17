@@ -12,16 +12,6 @@ import (
 	"example.com/m/v2/internal/utils"
 )
 
-type statusRecorder struct {
-	http.ResponseWriter
-	status int
-}
-
-func (r *statusRecorder) WriteHeader(status int) {
-	r.status = status
-	r.ResponseWriter.WriteHeader(status)
-}
-
 type Router struct {
 	trie        *routing.Trie
 	roundRobin  *routing.RoundRobin
