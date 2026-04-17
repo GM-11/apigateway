@@ -22,13 +22,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	metrics.Init()
 	router := internal.NewRouter(config.Routes)
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.Handle("/", router)
-
-	metrics.Init()
 
 	server := http.Server{
 		Addr:         ":8080",
