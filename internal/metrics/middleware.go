@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-type statusRecorder struct {
+type StatusRecorder struct {
 	http.ResponseWriter
-	status int
+	Status int
 }
 
-func (r *statusRecorder) WriteHeader(status int) {
-	r.status = status
+func (r *StatusRecorder) WriteHeader(status int) {
+	r.Status = status
 	r.ResponseWriter.WriteHeader(status)
 }
 
@@ -19,7 +19,7 @@ func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
-		recorder := &statusRecorder{ResponseWriter: w, status: 200}
+		recorder := &StatusRecorder{ResponseWriter: w, Status: 200}
 
 		next.ServeHTTP(recorder, r)
 
@@ -30,7 +30,7 @@ func Middleware(next http.Handler) http.Handler {
 		HttpRequestsTotal.WithLabelValues(
 			r.Method,
 			path,
-			http.StatusText(recorder.status),
+			http.StatusText(recorder.Status),
 		).Inc()
 
 		HttpRequestDuration.WithLabelValues(
